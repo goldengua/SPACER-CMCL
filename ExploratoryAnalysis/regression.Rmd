@@ -1,0 +1,71 @@
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(lme4)
+library(dplyr)
+rm(list = ls())
+```
+
+
+
+```{r comp critical only}
+# Read in the dataset
+df <- read.csv("PEC_data_for_CompModel_wMetrics.csv")
+df$compCorrected <- factor(df$compCorrected,levels = c("False",'True'))
+## Only only Speaker Corrected Utterances
+df <- df[df$speakerInitProduction!=df$speakerFinalProduction,]
+
+df$itemCrit <- as.factor(df$itemCrit)
+df$subject <- as.factor(df$subject)
+df$uttrID <- as.factor(df$uttrID)
+
+df$sur_comp <- df$sur_target - df$sur_speakerInitProduction
+df$len_comp <- df$len_target - df$len_speakerInitProduction
+df$freq_comp <- df$freq_target - df$freq_speakerInitProduction
+
+df$sur_comp <- scale(df$sur_comp)
+df$semantic_distance_comp <- scale(df$semantic_distance_comp)
+df$ipa_distance_comp <- scale(df$ipa_distance_comp)
+df$freq_comp <- scale(df$freq_comp)
+
+# Fit a logistic regression model with random effects for subject and item
+model_comp_crit <- glmer(compCorrected ~ sur_comp + semantic_distance_comp + ipa_distance_comp +
+               freq_comp + (1|uttrID) + (1|subject) + (1|critWindow),
+               data = df, family = binomial, control = glmerControl(optimizer = "bobyqa"))
+
+# Display model summary
+summary(model_comp_crit)
+```
+
+
+```{r speaker}
+
+# Read in the dataset
+df <- read.csv("PEC_data_for_SpeakerModel_wMetrics.csv")
+
+# Ensure correction_category is binary (if not already)
+df$speakerCorrected <- factor(df$speakerCorrected,levels = c("FALSE",'TRUE'))
+df$uttrID <- as.factor(df$uttrID)
+df$itemCrit <- as.factor(df$itemCrit)
+df$subject <- as.factor(df$subject)
+
+
+df$sur_speaker <- df$sur_target - df$sur_speakerInitProduction
+df$freq_speaker <- df$freq_target - df$freq_speakerInitProduction
+
+df$sur_speaker <- scale(df$sur_speaker)
+df$semantic_distance_speaker <- scale(df$semantic_distance_speaker)
+df$ipa_distance_speaker <- scale(df$ipa_distance_speaker)
+df$freq_speaker <- scale(df$freq_speaker)
+
+# Fit a logistic regression model with random effects for subject and item
+model.speaker <- glmer(speakerCorrected ~sur_speaker + semantic_distance_speaker
+               + ipa_distance_speaker + freq_speaker 
+               + (1|uttrID) + (1|critWindow),
+               data = df, family=binomial(),control = glmerControl(optimizer = "bobyqa"))
+
+# Display model summary
+summary(model.speaker)
+
+```
